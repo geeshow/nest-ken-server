@@ -7,7 +7,7 @@ import { AuthsService } from './auths.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { GoogleAuthSchema } from './GoogleAuth.schema';
+import { GoogleAuthSchema } from './google-auth.schema';
 
 @Module({
   imports: [

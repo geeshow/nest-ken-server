@@ -1,4 +1,3 @@
-// src/google-auth/google-auth.entity.ts
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 import { BaseSchema } from '../common/schema/base.schema';

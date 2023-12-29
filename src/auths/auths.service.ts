@@ -2,9 +2,9 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { GoogleRequestDto } from './dtos/google.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { GoogleAuth, GoogleAuthDocument } from './GoogleAuth.schema';
+import { GoogleAuth, GoogleAuthDocument } from './google-auth.schema';
 import { JwtService } from '@nestjs/jwt';
-import { RefreshTokenRequestDto, RefreshTokenResponseDto } from './dtos/refresh-token-request.dto';
+import { RefreshTokenResponseDto } from './dtos/refresh-token-request.dto';
 import { IUser } from './dtos/ReqUser.dto';
 
 @Injectable()
@@ -16,6 +16,7 @@ export class AuthsService {
   ) {}
 
   async googleLogin(googleLoginData: GoogleRequestDto) {
+    const refreshToken = this.createRefreshToken(googleLoginData.email);
     const upsertUserData = {
       providerId: googleLoginData.providerId,
       givenName: googleLoginData.givenName,
@@ -23,7 +24,7 @@ export class AuthsService {
       email: googleLoginData.email,
       profilePictureUrl: googleLoginData.profilePictureUrl,
       googleAccessToken: googleLoginData.googleAccessToken,
-      refreshToken: await this.createRefreshToken(googleLoginData.email),
+      refreshToken: refreshToken,
     } as GoogleAuthDocument;
 
     const userData = await this.googleAuthModel.findOneAndUpdate(
@@ -31,20 +32,19 @@ export class AuthsService {
       upsertUserData,
       { upsert: true, new: true },
     );
-
-    if (!userData) {
-      throw new NotFoundException('User not found');
-    }
-
+    
     return {
       jwt: this.createJwtToken(userData),
-      refreshToken: userData.refreshToken,
+      refreshToken: refreshToken,
     };
   }
 
-  async refreshToken(refreshTokenDto: RefreshTokenRequestDto): Promise<RefreshTokenResponseDto> {
-    this.jwtService.verify(refreshTokenDto.refreshToken);
-    const user = await this.googleAuthModel.findOne({ refreshToken: refreshTokenDto.refreshToken });
+  async refreshJwt(refreshToken: string): Promise<RefreshTokenResponseDto> {
+    if (!this.jwtService.verify(refreshToken)) {
+      throw new NotFoundException('Refresh token not found');
+    }
+    
+    const user = await this.googleAuthModel.findOne({ refreshToken });
     if (!user) throw new NotFoundException('Refresh token not found');
 
     return {
@@ -52,7 +52,7 @@ export class AuthsService {
     };
   }
 
-  private createJwtToken(user: GoogleAuthDocument) {
+  createJwtToken(user: GoogleAuthDocument) {
     const jwtPayload = {
       id: user._id,
       name: user.givenName,
@@ -67,7 +67,7 @@ export class AuthsService {
     });
   }
 
-  private async createRefreshToken(email: string) {
+  createRefreshToken(email: string) {
     return this.jwtService.sign({ email }, { expiresIn: '14d' });
   }
 }

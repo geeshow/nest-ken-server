@@ -47,7 +47,8 @@ export class AuthsController {
   }
 
   @Post('refresh-token')
-  async refreshToken(@Body(ValidationPipe) refreshTokenRequestDto: RefreshTokenRequestDto) {
-    return await this.authsService.refreshToken(refreshTokenRequestDto);
+  async refreshToken(@Req() req) {
+    const refreshToken = req.cookies.refreshToken;
+    return await this.authsService.refreshJwt(refreshToken);
   }
 }
